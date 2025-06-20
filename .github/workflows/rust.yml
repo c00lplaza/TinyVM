@@ -1,4 +1,4 @@
-name: Rust
+name: Rust CI
 
 on:
   push:
@@ -8,15 +8,62 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  build:
-
+  test:
+    name: Test
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ matrix.rust }}
+    
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+    
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+      if: matrix.rust == 'stable'
+    
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      if: matrix.rust == 'stable'
+    
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --all-features
+    
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --all-features
+    
+    - name: Run doc tests
+      run: cargo test --doc --verbose
+      if: matrix.rust == 'stable'
+
+  security:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+    
+    - name: Run security audit
+      run: |
+        cargo install cargo-audit
+        cargo audit
