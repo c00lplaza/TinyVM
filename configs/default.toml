@@ -1,0 +1,7 @@
+# Default configuration for TinyVM
+
+[memory]
+size = 256
+
+[vm]
+type = "basic"
